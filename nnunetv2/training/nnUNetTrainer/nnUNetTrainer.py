@@ -91,7 +91,7 @@ class nnUNetTrainer(object):
         # https://www.osnews.com/images/comics/wtfm.jpg
         # https://i.pinimg.com/originals/26/b2/50/26b250a738ea4abc7a5af4d42ad93af0.jpg
 
-        self.is_ddp = dist.is_available() and dist.is_initialized()
+        self.is_ddp = dist.is_available(device=xm.xla_device()) and dist.is_initialized(device=xm.xla_device())
         self.local_rank = 0 if not self.is_ddp else dist.get_rank()
 
         print("Machu-Mod-Test-Message")
@@ -166,7 +166,8 @@ class nnUNetTrainer(object):
         self.num_input_channels = None  # -> self.initialize()
         self.network = None  # -> self.build_network_architecture()
         self.optimizer = self.lr_scheduler = None  # -> self.initialize
-        self.grad_scaler = GradScaler() if self.device.type == 'cuda' else None
+        #self.grad_scaler = GradScaler() if self.device.type == 'cuda' else None
+        self.grad_scaler = GradScaler(device=m.xla_device())
         self.loss = None  # -> self.initialize
 
         ### Simple logging. Don't take that away from me!
@@ -195,7 +196,7 @@ class nnUNetTrainer(object):
 
         ## DDP batch size and oversampling can differ between workers and needs adaptation
         # we need to change the batch size in DDP because we don't use any of those distributed samplers
-        self._set_batch_size_and_oversample()
+        self._set_batch_size_and_oversample(device=xm.xla_device())
 
         self.was_initialized = False
 
@@ -995,7 +996,7 @@ class nnUNetTrainer(object):
         # If the device_type is 'cpu' then it's slow as heck and needs to be disabled.
         # If the device_type is 'mps' then it will complain that mps is not implemented, even if enabled=False is set. Whyyyyyyy. (this is why we don't make use of enabled=False)
         # So autocast will only be active if we have a cuda device.
-        with autocast(self.device.type, enabled=True) if self.device.type == 'cuda' else dummy_context():
+        with autocast(self.device.type, enabled=True) if True else dummy_context():
             output = self.network(data)
             # del data
             l = self.loss(output, target)
