@@ -94,8 +94,10 @@ class nnUNetTrainer(object):
         self.is_ddp = dist.is_available() and dist.is_initialized()
         self.local_rank = 0 if not self.is_ddp else dist.get_rank()
 
+        print("Machu-Mod-Test-Message")
         self.device = xm.xla_device()
         print(f"Using device: {self.device}")
+
 
         # # print what device we are using
         # if self.is_ddp:  # implicitly it's clear that we use cuda in this case
