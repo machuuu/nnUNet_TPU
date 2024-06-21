@@ -43,6 +43,8 @@ from torch.cuda import device_count
 from torch.cuda.amp import GradScaler
 from torch.nn.parallel import DistributedDataParallel as DDP
 
+import torch_xla.core.xla_model as xm 
+
 from nnunetv2.configuration import ANISO_THRESHOLD, default_num_processes
 from nnunetv2.evaluation.evaluate_predictions import compute_metrics_on_folder
 from nnunetv2.inference.export_prediction import export_prediction_from_logits, resample_and_save
@@ -92,19 +94,20 @@ class nnUNetTrainer(object):
         self.is_ddp = dist.is_available() and dist.is_initialized()
         self.local_rank = 0 if not self.is_ddp else dist.get_rank()
 
-        self.device = device
+        self.device = xm.xla_device()
+        print(f"Using device: {self.device}")
 
-        # print what device we are using
-        if self.is_ddp:  # implicitly it's clear that we use cuda in this case
-            print(f"I am local rank {self.local_rank}. {device_count()} GPUs are available. The world size is "
-                  f"{dist.get_world_size()}."
-                  f"Setting device to {self.device}")
-            self.device = torch.device(type='cuda', index=self.local_rank)
-        else:
-            if self.device.type == 'cuda':
-                # we might want to let the user pick this but for now please pick the correct GPU with CUDA_VISIBLE_DEVICES=X
-                self.device = torch.device(type='cuda', index=0)
-            print(f"Using device: {self.device}")
+        # # print what device we are using
+        # if self.is_ddp:  # implicitly it's clear that we use cuda in this case
+        #     print(f"I am local rank {self.local_rank}. {device_count()} GPUs are available. The world size is "
+        #           f"{dist.get_world_size()}."
+        #           f"Setting device to {self.device}")
+        #     self.device = torch.device(type='cuda', index=self.local_rank)
+        # else:
+        #     if self.device.type == 'cuda':
+        #         # we might want to let the user pick this but for now please pick the correct GPU with CUDA_VISIBLE_DEVICES=X
+        #         self.device = torch.device(type='cuda', index=0)
+        #     print(f"Using device: {self.device}")
 
         # loading and saving this class for continuing from checkpoint should not happen based on pickling. This
         # would also pickle the network etc. Bad, bad. Instead we just reinstantiate and then load the checkpoint we
