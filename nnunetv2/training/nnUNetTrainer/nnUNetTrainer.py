@@ -167,7 +167,7 @@ class nnUNetTrainer(object):
         self.network = None  # -> self.build_network_architecture()
         self.optimizer = self.lr_scheduler = None  # -> self.initialize
         #self.grad_scaler = GradScaler() if self.device.type == 'cuda' else None
-        self.grad_scaler = GradScaler(device=xm.xla_device())
+        self.grad_scaler = GradScaler()
         self.loss = None  # -> self.initialize
 
         ### Simple logging. Don't take that away from me!
@@ -196,7 +196,7 @@ class nnUNetTrainer(object):
 
         ## DDP batch size and oversampling can differ between workers and needs adaptation
         # we need to change the batch size in DDP because we don't use any of those distributed samplers
-        self._set_batch_size_and_oversample(device=xm.xla_device())
+        self._set_batch_size_and_oversample()
 
         self.was_initialized = False
 
