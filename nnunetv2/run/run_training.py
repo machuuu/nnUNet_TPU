@@ -269,6 +269,8 @@ def run_training_entry():
         torch.set_num_threads(1)
         torch.set_num_interop_threads(1)
         device = torch.device('cuda')
+    elif args.device == 'tpu':
+        device = torch.device
     else:
         device = torch.device('mps')
 

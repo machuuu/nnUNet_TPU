@@ -68,6 +68,7 @@ from nnunetv2.utilities.helpers import empty_cache, dummy_context
 from nnunetv2.utilities.label_handling.label_handling import convert_labelmap_to_one_hot, determine_num_input_channels
 from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
 
+from accelerate import Accelerator
 
 class nnUNetTrainer(object):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
@@ -92,7 +93,10 @@ class nnUNetTrainer(object):
         self.is_ddp = dist.is_available() and dist.is_initialized()
         self.local_rank = 0 if not self.is_ddp else dist.get_rank()
 
-        self.device = device
+        self.accelerator = Accelerator()
+        self.device = self.accelerator.device
+
+        print(f"Using Accelerator Device: {self.device}")
 
         # print what device we are using
         if self.is_ddp:  # implicitly it's clear that we use cuda in this case
@@ -230,6 +234,9 @@ class nnUNetTrainer(object):
             # torch 2.2.2 crashes upon compiling CE loss
             # if self._do_i_compile():
             #     self.loss = torch.compile(self.loss)
+
+            self.network, self.optimizer = self.accelerator.prepare(self.network, self.optimizer)
+
             self.was_initialized = True
         else:
             raise RuntimeError("You have called self.initialize even though the trainer was already initialized. "
@@ -966,7 +973,7 @@ class nnUNetTrainer(object):
         self.print_to_log_file("Training done.")
 
     def on_train_epoch_start(self):
-        self.network.train()
+        self.network.traintrain()
         self.lr_scheduler.step(self.current_epoch)
         self.print_to_log_file('')
         self.print_to_log_file(f'Epoch {self.current_epoch}')
@@ -979,6 +986,7 @@ class nnUNetTrainer(object):
         data = batch['data']
         target = batch['target']
 
+        data = self.accelerator.prepare(data)
         data = data.to(self.device, non_blocking=True)
         if isinstance(target, list):
             target = [i.to(self.device, non_blocking=True) for i in target]
@@ -1002,7 +1010,8 @@ class nnUNetTrainer(object):
             self.grad_scaler.step(self.optimizer)
             self.grad_scaler.update()
         else:
-            l.backward()
+            # l.backward()
+            self.accelerator.backward(l)
             torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
             self.optimizer.step()
         return {'loss': l.detach().cpu().numpy()}
@@ -1026,6 +1035,7 @@ class nnUNetTrainer(object):
         data = batch['data']
         target = batch['target']
 
+        data = self.accelerator.prepare(data)
         data = data.to(self.device, non_blocking=True)
         if isinstance(target, list):
             target = [i.to(self.device, non_blocking=True) for i in target]
@@ -1086,6 +1096,8 @@ class nnUNetTrainer(object):
             tp_hard = tp_hard[1:]
             fp_hard = fp_hard[1:]
             fn_hard = fn_hard[1:]
+
+        self.accelerator.backward(l)
 
         return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard}
 
