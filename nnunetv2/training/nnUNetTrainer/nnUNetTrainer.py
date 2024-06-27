@@ -688,6 +688,10 @@ class nnUNetTrainer(object):
                                         oversample_foreground_percent=self.oversample_foreground_percent,
                                         sampling_probabilities=None, pad_sides=None, transforms=val_transforms)
 
+
+        dl_tr = self.optimizer.prepare(dl_tr)
+        dl_val = self.optimizer.prepare(dl_val)
+
         allowed_num_processes = get_allowed_n_proc_DA()
         if allowed_num_processes == 0:
             mt_gen_train = SingleThreadedAugmenter(dl_tr, None)
@@ -989,7 +993,7 @@ class nnUNetTrainer(object):
         data = batch['data']
         target = batch['target']
 
-        data = self.accelerator.prepare(data)
+        # data = self.accelerator.prepare(data)
         data = data.to(self.device, non_blocking=True)
         if isinstance(target, list):
             target = [i.to(self.device, non_blocking=True) for i in target]
@@ -1038,7 +1042,7 @@ class nnUNetTrainer(object):
         data = batch['data']
         target = batch['target']
 
-        data = self.accelerator.prepare(data)
+        # data = self.accelerator.prepare(data)
         data = data.to(self.device, non_blocking=True)
         if isinstance(target, list):
             target = [i.to(self.device, non_blocking=True) for i in target]
