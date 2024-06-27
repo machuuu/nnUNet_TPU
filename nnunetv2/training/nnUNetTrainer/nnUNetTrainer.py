@@ -219,6 +219,9 @@ class nnUNetTrainer(object):
                 self.label_manager.num_segmentation_heads,
                 self.enable_deep_supervision
             ).to(self.device)
+
+            self.network = self.accelerator.prepare(self.network)
+
             # compile network for free speedup
             if self._do_i_compile():
                 self.print_to_log_file('Using torch.compile...')
@@ -235,7 +238,7 @@ class nnUNetTrainer(object):
             # if self._do_i_compile():
             #     self.loss = torch.compile(self.loss)
 
-            self.network, self.optimizer = self.accelerator.prepare(self.network, self.optimizer)
+            self.optimizer = self.accelerator.prepare(self.optimizer)
 
             self.was_initialized = True
         else:
