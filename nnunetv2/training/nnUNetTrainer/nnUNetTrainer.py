@@ -973,7 +973,7 @@ class nnUNetTrainer(object):
         self.print_to_log_file("Training done.")
 
     def on_train_epoch_start(self):
-        self.network.traintrain()
+        self.network.train()
         self.lr_scheduler.step(self.current_epoch)
         self.print_to_log_file('')
         self.print_to_log_file(f'Epoch {self.current_epoch}')
