@@ -689,8 +689,8 @@ class nnUNetTrainer(object):
                                         sampling_probabilities=None, pad_sides=None, transforms=val_transforms)
 
 
-        dl_tr = self.optimizer.prepare(dl_tr)
-        dl_val = self.optimizer.prepare(dl_val)
+        dl_tr = self.accelerator.prepare(dl_tr)
+        dl_val = self.accelerator.prepare(dl_val)
 
         allowed_num_processes = get_allowed_n_proc_DA()
         if allowed_num_processes == 0:
